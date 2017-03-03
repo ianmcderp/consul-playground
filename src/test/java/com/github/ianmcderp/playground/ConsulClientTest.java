@@ -6,12 +6,18 @@ import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.NewService;
 import com.ecwid.consul.v1.health.model.HealthService;
 import com.ecwid.consul.v1.kv.model.GetValue;
+import org.cfg4j.provider.ConfigurationProvider;
+import org.cfg4j.provider.ConfigurationProviderBuilder;
+import org.cfg4j.source.ConfigurationSource;
+import org.cfg4j.source.consul.ConsulConfigurationSourceBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Created by Matthias Riedl (ianmcderp) on 26.02.2017.
@@ -69,5 +75,26 @@ public class ConsulClientTest {
                 .stream()
                 .map(HealthService::getService)
                 .forEach(service -> System.out.println(service.toString()));
+    }
+
+    @Test
+    public void testCfg4j() throws InterruptedException {
+        // Given key/value configuration
+        consulClient.setKVValue("com.my.app.foo", "foo");
+        consulClient.setKVValue("com.my.app.bar", "bar");
+        consulClient.setKVValue("com.your.app.foo", "hello");
+        consulClient.setKVValue("com.your.app.bar", "world");
+
+        // And configuration provider
+        ConfigurationSource configurationSource = new ConsulConfigurationSourceBuilder().build();
+        ConfigurationProvider configurationProvider = new ConfigurationProviderBuilder()
+                .withConfigurationSource(configurationSource)
+                .build();
+
+        // When
+        MyAppConfig configuration = configurationProvider.bind("com.my.app", MyAppConfig.class);
+
+        // Then
+        assertEquals("foo", configuration.foo());
     }
 }
